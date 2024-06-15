@@ -101,3 +101,17 @@ class CancelReservationView(generics.UpdateAPIView):
         self.perform_update(serializer)
 
         return Response(serializer.data)
+
+
+class AddMarkerView(generics.CreateAPIView):
+    queryset = Marker.objects.all()
+    serializer_class = MarkerSerializer
+
+    def create(self, request, *args, **kwargs):
+        latitude = request.data.get('latitude')
+        longitude = request.data.get('longitude')
+
+        if Marker.objects.filter(lat=latitude, lng=longitude).exists():
+            return Response({'error': 'Marker already exists at this location'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return super().create(request, *args, **kwargs)
