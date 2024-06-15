@@ -4,6 +4,7 @@ from .models import Marker
 from .serializers import MarkerSerializer
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework import status
 import math
 
@@ -128,4 +129,49 @@ class AddMarkerView(generics.CreateAPIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
             print(f"Error occurred while creating marker: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MarkerOccupiedStatusView(APIView):
+    def get(self, request, marker_id):
+        try:
+            marker = Marker.objects.get(id=marker_id)
+            return Response({'is_occupied': marker.is_occupied}, status=status.HTTP_200_OK)
+        except Marker.DoesNotExist:
+            return Response({'error': 'Marker not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class ClosestAvailableMarkerView(APIView):
+    def get(self, request):
+        lat = request.query_params.get('lat')
+        lon = request.query_params.get('lng')
+
+        if lat is None or lon is None:
+            return Response({'error': 'Latitude and longitude are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            lat = float(lat)
+            lon = float(lon)
+        except ValueError:
+            return Response({'error': 'Invalid latitude or longitude'}, status=status.HTTP_400_BAD_REQUEST)
+
+        closest_marker = None
+        min_distance = float('inf')
+
+        try:
+            all_markers = Marker.objects.all()  # Fetch all markers
+            available_markers = [marker for marker in all_markers if not marker.is_occupied]  # Filter in Python
+
+            for marker in available_markers:
+                distance = haversine(lat, lon, marker.lat, marker.lng)
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_marker = marker
+
+            if closest_marker:
+                serializer = MarkerSerializer(closest_marker)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response({'error': 'No available markers found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
