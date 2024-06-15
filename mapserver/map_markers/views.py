@@ -3,6 +3,8 @@ from rest_framework import generics
 from .models import Marker
 from .serializers import MarkerSerializer
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+from rest_framework import status
 import math
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -21,9 +23,11 @@ class MarkerListCreateView(generics.ListCreateAPIView):
     queryset = Marker.objects.all()
     serializer_class = MarkerSerializer
 
+
 class MarkerDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Marker.objects.all()
     serializer_class = MarkerSerializer
+
 
 class MarkersScanView(generics.ListAPIView):
     serializer_class = MarkerSerializer
@@ -61,3 +65,39 @@ class MarkersScanView(generics.ListAPIView):
                 filtered_queryset.append(marker)
 
         return filtered_queryset
+
+
+class ReserveMarkerView(generics.UpdateAPIView):
+    queryset = Marker.objects.all()
+    serializer_class = MarkerSerializer
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+
+        if instance.is_reserved:
+            return Response({"error": "Marker is already reserved"}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(instance, data={'is_reserved': True}, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response(serializer.data)
+
+
+class CancelReservationView(generics.UpdateAPIView):
+    queryset = Marker.objects.all()
+    serializer_class = MarkerSerializer
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+
+        if instance.is_occupied:
+            return Response({"error": "Marker is occupied and cannot be canceled"}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(instance, data={'is_reserved': False}, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response(serializer.data)
