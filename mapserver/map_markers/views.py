@@ -110,8 +110,22 @@ class AddMarkerView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         latitude = request.data.get('latitude')
         longitude = request.data.get('longitude')
+        is_occupied = request.data.get('is_occupied', False)
 
-        if Marker.objects.filter(lat=latitude, lng=longitude).exists():
-            return Response({'error': 'Marker already exists at this location'}, status=status.HTTP_400_BAD_REQUEST)
+        print(f"Received latitude: {latitude}, longitude: {longitude}, is_occupied: {is_occupied}")
 
-        return super().create(request, *args, **kwargs)
+        try:
+            # Check if a marker exists at the exact latitude and longitude
+            # if Marker.objects.filter(lat=latitude, lng=longitude).exists():
+            #     print("Marker already exists at this location")
+            #     return Response({'error': 'Marker already exists at this location'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create the marker with the is_occupied field
+            marker = Marker(lat=latitude, lng=longitude, is_occupied=is_occupied)
+            marker.save()
+
+            serializer = self.get_serializer(marker)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            print(f"Error occurred while creating marker: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
