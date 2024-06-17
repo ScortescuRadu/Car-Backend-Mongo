@@ -61,6 +61,8 @@ class MarkersScanView(generics.ListAPIView):
         filtered_queryset = []
 
         for marker in queryset:
+            if marker.lat is None or marker.lng is None:
+                continue  # Skip markers with invalid coordinates
             distance_to_marker = haversine(lat, lon, marker.lat, marker.lng)
             if distance_to_marker <= distance:
                 filtered_queryset.append(marker)
