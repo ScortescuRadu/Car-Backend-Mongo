@@ -162,7 +162,7 @@ class ClosestAvailableMarkerView(APIView):
 
         try:
             all_markers = Marker.objects.all()  # Fetch all markers
-            available_markers = [marker for marker in all_markers if not marker.is_occupied]  # Filter in Python
+            available_markers = [marker for marker in all_markers if not marker.is_occupied and marker.lat is not None and marker.lng is not None]  # Filter in Python
 
             for marker in available_markers:
                 distance = haversine(lat, lon, marker.lat, marker.lng)
